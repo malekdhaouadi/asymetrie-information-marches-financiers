@@ -1,7 +1,7 @@
 ---
 title: "Asymétrie d'Information et Efficience Informationnelle des Marchés Financiers"
 subtitle: "Extension de l'étude d'El Bouazizi (2018) à quatre marchés internationaux (2018-2025)"
-author: "Votre nom - Modèles Mathématiques pour la Finance"
+author: "Groupe 3 - Modèles Mathématiques pour la Finance"
 date: "2026-04-24"
 output:
   html_document:
@@ -24,7 +24,9 @@ load("data/regression_results.RData")
 
 show_figure <- function(path) {
 	if (file.exists(path)) {
-		knitr::include_graphics(path)
+		paste0('<img src="', path, '" style="width:100%; height:auto;" />')
+	} else {
+		""
 	}
 }
 
@@ -234,35 +236,22 @@ Cette figure met en évidence l'amplification de la relation pendant la crise sa
 
 ### Figure 5. Diagnostics de régression
 
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure5_usa_residuals.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure5_usa_histogram.png")`</div>
-</div>
-
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure5_usa_qqplot.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure5_fra_residuals.png")`</div>
-</div>
-
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure5_fra_histogram.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure5_fra_qqplot.png")`</div>
-</div>
-
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure5_bra_residuals.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure5_bra_histogram.png")`</div>
-</div>
-
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure5_bra_qqplot.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure5_tur_residuals.png")`</div>
-</div>
-
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure5_tur_histogram.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure5_tur_qqplot.png")`</div>
-</div>
+```{r figure5-diagnostics, echo=FALSE, fig.show='hold', out.width='49%', fig.align='center'}
+knitr::include_graphics(c(
+	"output/figures/figure5_usa_residuals.png",
+	"output/figures/figure5_usa_histogram.png",
+	"output/figures/figure5_usa_qqplot.png",
+	"output/figures/figure5_fra_residuals.png",
+	"output/figures/figure5_fra_histogram.png",
+	"output/figures/figure5_fra_qqplot.png",
+	"output/figures/figure5_bra_residuals.png",
+	"output/figures/figure5_bra_histogram.png",
+	"output/figures/figure5_bra_qqplot.png",
+	"output/figures/figure5_tur_residuals.png",
+	"output/figures/figure5_tur_histogram.png",
+	"output/figures/figure5_tur_qqplot.png"
+))
+```
 
 Les diagnostics confirment une autocorrélation modérée et une non-normalité fréquente des résidus, caractéristiques des données financières.
 
