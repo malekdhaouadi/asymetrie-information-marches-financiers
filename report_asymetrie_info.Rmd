@@ -196,29 +196,27 @@ Tendances principales.
 
 ### Figure 1. Relation entre $RTA$ et $F_P$ par marché
 
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure1_usa_scatter.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure1_france_scatter.png")`</div>
-</div>
-
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure1_brazil_scatter.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure1_turkey_scatter.png")`</div>
-</div>
+```{r figure1-visuals, echo=FALSE, fig.show='hold', out.width='49%', fig.align='center'}
+knitr::include_graphics(c(
+	"output/figures/figure1_usa_scatter.png",
+	"output/figures/figure1_france_scatter.png",
+	"output/figures/figure1_brazil_scatter.png",
+	"output/figures/figure1_turkey_scatter.png"
+))
+```
 
 La pente de régression est la plus marquée pour le Brésil et la plus faible pour la Turquie sur la période complète.
 
 ### Figure 2. Évolution temporelle de $RTA$ et $F_P$
 
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure2_usa_timeseries.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure2_france_timeseries.png")`</div>
-</div>
-
-<div class="row">
-	<div class="col-md-6">`r show_figure("output/figures/figure2_brazil_timeseries.png")`</div>
-	<div class="col-md-6">`r show_figure("output/figures/figure2_turkey_timeseries.png")`</div>
-</div>
+```{r figure2-visuals, echo=FALSE, fig.show='hold', out.width='49%', fig.align='center'}
+knitr::include_graphics(c(
+	"output/figures/figure2_usa_timeseries.png",
+	"output/figures/figure2_france_timeseries.png",
+	"output/figures/figure2_brazil_timeseries.png",
+	"output/figures/figure2_turkey_timeseries.png"
+))
+```
 
 Les séries évoluent de manière cohérente dans la plupart des épisodes, à l'exception du régime turc post-2022.
 
