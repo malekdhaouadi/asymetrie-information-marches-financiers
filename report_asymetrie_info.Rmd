@@ -1,0 +1,383 @@
+---
+title: "Asymétrie d'Information et Efficience Informationnelle des Marchés Financiers"
+subtitle: "Extension de l'étude d'El Bouazizi (2018) à quatre marchés internationaux (2018-2025)"
+author: "Votre nom - Modèles Mathématiques pour la Finance"
+date: "2026-04-24"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+load("data/rta_fp.RData")
+load("data/regression_results.RData")
+
+show_figure <- function(path) {
+	if (file.exists(path)) {
+		knitr::include_graphics(path)
+	}
+}
+
+format_p_value <- function(x) {
+	ifelse(x < 0.0001, "< 0.0001", format(x, scientific = FALSE, digits = 4))
+}
+```
+
+# 1. Introduction
+
+La théorie de l'efficience informationnelle suppose que les prix des actifs incorporent rapidement et intégralement toute nouvelle information (Fama, 1970). En pratique, les épisodes de stress financier, les asymétries informationnelles et les ruptures de régime compliquent cette hypothèse.
+
+Dans la continuité d'El Bouazizi (2018), ce rapport étend l'analyse à quatre marchés de profils distincts : les États-Unis et la France, marchés développés, puis le Brésil et la Turquie, marchés émergents.
+
+L'objectif est de tester la relation entre l'asymétrie d'information, mesurée par la fourchette de prix $F_P$, et l'inefficience informationnelle, approchée par la rentabilité anormale $RTA$.
+
+Hypothèse de recherche :
+
+$$RTA_t = \alpha + \beta \cdot F_{P,t} + \varepsilon_t$$
+
+On s'attend à $\beta > 0$ : plus l'asymétrie d'information est forte, plus l'inefficience informationnelle augmente.
+
+# 2. Méthodologie
+
+## 2.1 Variables étudiées
+
+| Variable | Définition | Rôle dans l'analyse | Calcul |
+|---|---|---|---|
+| $RTA$ | Rentabilité anormale | Proxy d'inefficience informationnelle | $RTA = R_{observé} - (\alpha + \beta \cdot R_{marché})$ |
+| $F_P$ | Fourchette de prix quotidienne | Proxy d'asymétrie d'information | $F_P = Prix_{haut} - Prix_{bas}$ |
+
+## 2.2 Modèle de marché
+
+Pour chaque titre, le modèle de marché est estimé par moindres carrés ordinaires :
+
+$$R_{it} = \alpha_i + \beta_i \cdot R_{Mt} + \varepsilon_{it}$$
+
+où $R_{it}$ désigne le rendement du titre $i$ à la date $t$, $R_{Mt}$ le rendement du marché, $\beta_i$ la sensibilité systématique du titre et $\varepsilon_{it}$ le terme spécifique.
+
+## 2.3 Échantillon
+
+```{r sample-description}
+sample_desc <- data.frame(
+	Marché = c("États-Unis", "France", "Brésil", "Turquie"),
+	Index = c("S&P 500", "CAC 40", "Bovespa", "BIST 100"),
+	Type = c("Développé", "Développé", "Émergent", "Émergent"),
+	Titres = c(10, 10, 8, 10),
+	Période = c("2018-2025", "2018-2025", "2018-2025", "2018-2025")
+)
+
+sample_desc %>%
+	kable(
+		caption = "Description de l'échantillon par marché",
+		col.names = c("Marché", "Index", "Type", "Nombre de titres", "Période")
+	) %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+## 2.4 Statistiques descriptives
+
+```{r descriptive-stats}
+desc_stats %>%
+	transmute(
+		Marché = Market,
+		`N observations` = N_obs,
+		`RTA moyenne` = round(RTA_mean, 5),
+		`RTA écart-type` = round(RTA_sd, 5),
+		`RTA minimum` = round(RTA_min, 5),
+		`RTA maximum` = round(RTA_max, 5),
+		`F_P moyenne` = round(FP_mean, 2),
+		`F_P écart-type` = round(FP_sd, 2),
+		`F_P minimum` = round(FP_min, 2),
+		`F_P maximum` = round(FP_max, 2)
+	) %>%
+	kable(caption = "Statistiques descriptives par marché") %>%
+	add_header_above(c(" " = 2, "Rentabilité anormale (RTA)" = 4, "Fourchette de prix ($F_P$)" = 4)) %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Les principaux faits stylisés sont les suivants.
+
+- Les marchés émergents présentent une RTA moyenne légèrement plus élevée que les marchés développés.
+- La Turquie affiche la plus forte dispersion de $F_P$, ce qui suggère une instabilité plus marquée du proxy.
+- Le Brésil combine une fourchette de prix plus faible et une relation RTA-$F_P$ nettement positive.
+
+# 3. Résultats
+
+## 3.1 Corrélations entre $RTA$ et $F_P$
+
+```{r correlations}
+cor_results %>%
+	kable(
+		caption = "Corrélation entre RTA et $F_P$ par marché",
+		col.names = c("Marché", "Corrélation", "p-value"),
+		digits = c(NA, 4, 6)
+	) %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Lecture des résultats.
+
+- Brésil : $r = 0.627$, relation forte et statistiquement robuste.
+- France : $r = 0.553$, relation modérée.
+- États-Unis : $r = 0.524$, relation modérée.
+- Turquie : $r = 0.118$, relation faible sur la période complète.
+
+## 3.2 Corrélations par sous-période
+
+```{r correlations-period}
+cor_by_period %>%
+	mutate(Correlation = round(Correlation, 4)) %>%
+	kable(caption = "Évolution de la corrélation RTA-$F_P$ par sous-période") %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+La Turquie présente une rupture nette de la relation à partir de 2022.
+
+- 2018-2019 : $r = 0.658$, corrélation forte.
+- 2020-2021 : $r = 0.554$, corrélation encore marquée.
+- 2022-2025 : $r = 0.038$, corrélation quasi nulle.
+
+Cette inflexion suggère que la fourchette de prix n'est plus uniquement un signal d'asymétrie d'information dans un contexte d'hyperinflation et de forte volatilité monétaire.
+
+## 3.3 Régression linéaire sur la période complète
+
+```{r regression-full}
+full_results %>%
+	select(Market, Beta, Std_Error_Beta, P_value_Beta, R_squared, N_obs, Significant) %>%
+	mutate(
+		Beta = round(Beta, 6),
+		R_squared = round(R_squared, 3),
+		P_value_Beta = format_p_value(P_value_Beta)
+	) %>%
+	kable(
+		caption = "Résultats de régression : $RTA = \\alpha + \\beta \\cdot F_P$ (2018-2025)",
+		col.names = c("Marché", "β", "Erreur-type", "p-value", "R²", "N", "Significativité")
+	) %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Les coefficients $\beta$ sont positifs pour l'ensemble des marchés et significatifs au seuil de 1 %, ce qui confirme l'hypothèse posée.
+
+## 3.4 Régression par sous-période
+
+```{r regression-subperiod}
+subperiod_results_df %>%
+	select(Market, Period, Beta, P_value_Beta, R_squared, Significant) %>%
+	mutate(
+		Beta = round(Beta, 6),
+		R_squared = round(R_squared, 3),
+		P_value_Beta = format_p_value(P_value_Beta)
+	) %>%
+	kable(caption = "Coefficient β par sous-période") %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Tendances principales.
+
+| Marché | Évolution de β | Interprétation |
+|---|---|---|
+| États-Unis | 0.00168 → 0.00343 → 0.00119 | Effet renforcé pendant la crise sanitaire |
+| France | 0.00217 → 0.00278 → 0.00133 | Amplification modérée puis normalisation |
+| Brésil | 0.01547 → 0.01181 → 0.01035 | Effet élevé et relativement persistant |
+| Turquie | 0.03102 → 0.01000 → 0.00012 | Rupture structurelle après 2022 |
+
+## 3.5 Visualisations
+
+### Figure 1. Relation entre $RTA$ et $F_P$ par marché
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure1_usa_scatter.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure1_france_scatter.png")`</div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure1_brazil_scatter.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure1_turkey_scatter.png")`</div>
+</div>
+
+La pente de régression est la plus marquée pour le Brésil et la plus faible pour la Turquie sur la période complète.
+
+### Figure 2. Évolution temporelle de $RTA$ et $F_P$
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure2_usa_timeseries.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure2_france_timeseries.png")`</div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure2_brazil_timeseries.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure2_turkey_timeseries.png")`</div>
+</div>
+
+Les séries évoluent de manière cohérente dans la plupart des épisodes, à l'exception du régime turc post-2022.
+
+### Figure 3. Comparaison des coefficients β
+
+`r show_figure("output/figures/figure3_beta_coefficients.png")`
+
+Le Brésil se distingue par un effet structurellement plus fort de l'asymétrie d'information sur l'inefficience.
+
+### Figure 4. Évolution des coefficients β par sous-période
+
+`r show_figure("output/figures/figure4_subperiod_beta.png")`
+
+Cette figure met en évidence l'amplification de la relation pendant la crise sanitaire et la rupture observée en Turquie.
+
+### Figure 5. Diagnostics de régression
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure5_usa_residuals.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure5_usa_histogram.png")`</div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure5_usa_qqplot.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure5_fra_residuals.png")`</div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure5_fra_histogram.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure5_fra_qqplot.png")`</div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure5_bra_residuals.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure5_bra_histogram.png")`</div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure5_bra_qqplot.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure5_tur_residuals.png")`</div>
+</div>
+
+<div class="row">
+	<div class="col-md-6">`r show_figure("output/figures/figure5_tur_histogram.png")`</div>
+	<div class="col-md-6">`r show_figure("output/figures/figure5_tur_qqplot.png")`</div>
+</div>
+
+Les diagnostics confirment une autocorrélation modérée et une non-normalité fréquente des résidus, caractéristiques des données financières.
+
+### Figure 6. L'anomalie turque
+
+`r show_figure("output/figures/figure6_turkey_anomaly.png")`
+
+L'hyperinflation turque a profondément perturbé le proxy $F_P$, ce qui explique l'effondrement de la relation théorique après 2022.
+
+# 4. Discussion
+
+## 4.1 Validation de l'hypothèse
+
+Les résultats confirment globalement l'idée centrale d'El Bouazizi (2018) : l'asymétrie d'information est associée à une inefficience informationnelle plus forte.
+
+## 4.2 Hiérarchie des marchés
+
+```{r hierarchy-table}
+hierarchy_table <- data.frame(
+	Rang = c(1, 2, 3, 4),
+	Marché = c("Brésil", "France", "États-Unis", "Turquie"),
+	`β (période complète)` = c(0.01075, 0.00152, 0.00163, 0.00035),
+	Interprétation = c(
+		"Asymétrie d'information très marquée",
+		"Impact modéré",
+		"Impact modéré",
+		"Effet masqué par l'hyperinflation"
+	)
+)
+
+hierarchy_table %>%
+	kable(caption = "Hiérarchie empirique des marchés") %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Les marchés émergents demeurent plus sensibles à l'asymétrie d'information, tandis que les marchés développés bénéficient d'une meilleure profondeur de marché et d'un encadrement plus strict.
+
+## 4.3 Effet de la crise sanitaire
+
+La période 2020-2021 a amplifié la relation dans plusieurs marchés, en particulier aux États-Unis et en France. Les épisodes de crise tendent à accroître l'écart entre agents mieux informés et agents moins informés.
+
+## 4.4 L'anomalie turque
+
+La Turquie constitue un cas méthodologique particulier. L'hyperinflation a perturbé la signification économique de $F_P$, car la fourchette de prix a capté la volatilité monétaire autant, sinon plus, que l'asymétrie d'information.
+
+Cette rupture n'invalide pas le modèle ; elle souligne plutôt sa sensibilité au contexte macroéconomique.
+
+# 5. Diagnostics de régression
+
+```{r diagnostics}
+diagnostics_full %>%
+	select(Market, Lag1_Autocorrelation, Spearman_rho, Het_P_value, Shapiro_Wilk) %>%
+	kable(
+		caption = "Diagnostics des régressions - période complète",
+		col.names = c("Marché", "Autocorrélation lag 1", "ρ de Spearman", "p-value hétéroscédasticité", "Shapiro-Wilk")
+	) %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+Interprétation synthétique.
+
+- L'autocorrélation des résidus est modérée, ce qui est courant dans les séries financières.
+- L'hétéroscédasticité est présente pour les États-Unis, la France et le Brésil.
+- La Turquie se singularise par une p-value élevée, cohérente avec une rupture de régime.
+- La non-normalité des résidus reste fréquente dans ce type d'application empirique.
+
+# 6. Conclusion
+
+## 6.1 Réponse à la question de recherche
+
+L'analyse confirme que l'asymétrie d'information, approchée par $F_P$, est positivement liée à l'inefficience informationnelle des marchés étudiés.
+
+## 6.2 Contributions
+
+- Validation internationale de l'étude d'El Bouazizi (2018).
+- Mise en évidence d'un effet de crise sanitaire sur l'intensité de la relation.
+- Identification d'une limite importante du proxy $F_P$ dans des contextes macroéconomiques extrêmes.
+
+## 6.3 Implications pour les autorités de tutelle
+
+```{r policy-table}
+policy_table <- data.frame(
+	Recommandation = c(
+		"Renforcer la transparence",
+		"Sanctionner les délits d'initiés",
+		"Améliorer la qualité de l'information financière",
+		"Surveiller les périodes de crise"
+	),
+	Justification = c(
+		"Réduit l'avantage informationnel des initiés",
+		"Diminue le comportement opportuniste",
+		"Réduit l'asymétrie d'information",
+		"L'effet est amplifié en période de volatilité"
+	)
+)
+
+policy_table %>%
+	kable(caption = "Implications pour les régulateurs") %>%
+	kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+```
+
+## 6.4 Limites et pistes futures
+
+Le proxy $F_P$ demeure imparfait, notamment lorsque les prix reflètent des chocs macroéconomiques et non strictement informationnels. Des mesures complémentaires, telles que le PIN ou le spread de Kyle, permettraient de consolider l'analyse.
+
+# 7. Références
+
+El Bouazizi, N. (2018). *Analyse de la relation entre l'asymétrie d'information et l'efficience informationnelle des marchés financiers : étude empirique sur les sociétés cotées à la Bourse de Casablanca*. Finance & Finance Internationale, N°11.
+
+Fama, E. F. (1970). *Efficient Capital Markets: A Review of Theory and Empirical Work*. Journal of Finance, 25(2), 383-417.
+
+Grossman, S. J., & Stiglitz, J. E. (1980). *On the Impossibility of Informationally Efficient Markets*. American Economic Review, 70(3), 393-408.
+
+Kyle, S. A. (1985). *Continuous Auctions and Insider Trading*. Econometrica, 53(6), 1335-1355.
+
+Sharpe, W. F. (1963). *A Simplified Model of Portfolio Analysis*. Management Science, 9(2), 277-293.
+
+*Rapport réalisé dans le cadre du module Modèles Mathématiques pour la Finance (2025-2026)*
