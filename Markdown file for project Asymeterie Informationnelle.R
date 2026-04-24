@@ -241,3 +241,220 @@ for (mkt in unique(params_all$Market)) {
       "| avg R2 =",  round(mean(sub$R2),  4), "\n")
 }
 
+
+#étape 3
+# Compute RTA (Abnormal Return) and F_P (Bid-Ask Spread)
+
+#ABNORMAL RETURN (RTA)
+# RTA = Observed Return - Theoretical Return
+# Theoretical Return = alpha + beta * Market Return
+
+compute_rta <- function(res, index_obj, market_name) {
+  
+  cat("\nComputing RTA for", market_name, "\n")
+  # Market log-returns
+  Rmt <- na.omit(diff(log(Ad(index_obj))))
+  colnames(Rmt) <- "Rmt"
+  Rmt_df <- data.frame(
+    Date = as.Date(index(Rmt)),
+    Rmt  = as.numeric(Rmt)
+  )
+  rta_per_stock <- list()
+  
+  for (tk in names(res)) {
+    
+    r     <- res[[tk]]
+    alpha <- r$alpha
+    beta  <- r$beta
+    # Observed log-returns
+    stock_obj <- get(tk)
+    Rit <- na.omit(diff(log(Ad(stock_obj))))
+    Rit_df <- data.frame(
+      Date = as.Date(index(Rit)),
+      Rit  = as.numeric(Rit)
+    )
+    
+    # Merge observed returns with market returns
+    df <- merge(Rit_df, Rmt_df, by = "Date") |> na.omit()
+    
+    # Theoretical return from market model
+    df$RTT <- alpha + beta * df$Rmt
+    
+    # Abnormal return = absolute difference
+    df$RTA <- abs(df$Rit - df$RTT)
+    
+    rta_per_stock[[tk]] <- df[, c("Date", "RTA")]
+    cat("  ", tk, "— avg RTA =",
+        round(mean(df$RTA, na.rm = TRUE), 6), "\n")
+}
+  
+  # Average RTA across all stocks by date
+  all_rta <- Reduce(function(a, b) merge(a, b, by = "Date"),
+                    rta_per_stock)
+  
+  dates      <- all_rta$Date
+  rta_values <- rowMeans(all_rta[, -1], na.rm = TRUE)
+  
+  result <- data.frame(Date = dates, RTA = rta_values)
+  cat(market_name, "— total obs =", nrow(result),
+      "| overall avg RTA =",
+      round(mean(result$RTA, na.rm = TRUE), 6), "\n")
+  
+  return(result)
+} 
+
+#RTA pour chaque marché
+rta_usa <- compute_rta(res_usa, GSPC,     "USA")
+rta_fra <- compute_rta(res_fra, FCHI,     "France")
+rta_bra <- compute_rta(res_bra, BVSP,     "Brazil")
+rta_tur <- compute_rta(res_tur, XU100.IS, "Turkey")
+
+
+
+#BID-ASK SPREAD / PRICE RANGE (F_P)
+# F_P = Daily High - Daily Low
+# Proxy for information asymmetry
+
+compute_fp <- function(tickers, market_name) {
+  
+  cat("\nComputing F_P for", market_name, "...\n")
+  
+  fp_per_stock <- list()
+  
+  for (tk in tickers) {
+    
+    stock_obj <- get(tk)
+    
+    hi <- Hi(stock_obj)
+    lo <- Lo(stock_obj)
+    fp <- na.omit(hi - lo)
+    
+    fp_df <- data.frame(
+      Date = as.Date(index(fp)),
+      FP   = as.numeric(fp)
+    )
+    
+    fp_per_stock[[tk]] <- fp_df
+    cat("  ", tk, "— avg F_P =",
+        round(mean(fp_df$FP, na.rm = TRUE), 4), "\n")
+}
+  
+  # Average F_P across all stocks by date
+  all_fp <- Reduce(function(a, b) merge(a, b, by = "Date"),
+                   fp_per_stock)
+  
+  dates     <- all_fp$Date
+  fp_values <- rowMeans(all_fp[, -1], na.rm = TRUE)
+  
+  result <- data.frame(Date = dates, FP = fp_values)
+  cat(market_name, "— total obs =", nrow(result),
+      "| overall avg F_P =",
+      round(mean(result$FP, na.rm = TRUE), 4), "\n")
+  
+  return(result)
+}
+
+#F_P pour chaque marché
+fp_usa <- compute_fp(tickers_usa, "USA")
+fp_fra <- compute_fp(tickers_fra, "France")
+fp_bra <- compute_fp(tickers_bra, "Brazil")
+fp_tur <- compute_fp(tickers_tur, "Turkey")
+
+#MERGE RTA + F_P INTO MODEL DATAFRAMES
+
+make_model_df <- function(rta, fp, market) {
+  df <- merge(rta, fp, by = "Date") |> na.omit()
+  df$Market <- market
+  # Add sub-period labels
+  df$Period <- case_when(
+    df$Date < as.Date("2020-01-01") ~ "P1: 2018-2019 (Pre-COVID)",
+    df$Date < as.Date("2022-01-01") ~ "P2: 2020-2021 (COVID)",
+    TRUE                            ~ "P3: 2022-2025 (Post-COVID)"
+  )
+  return(df)
+}
+
+df_usa <- make_model_df(rta_usa, fp_usa, "USA")
+df_fra <- make_model_df(rta_fra, fp_fra, "France")
+df_bra <- make_model_df(rta_bra, fp_bra, "Brazil")
+df_tur <- make_model_df(rta_tur, fp_tur, "Turkey")
+df_all <- rbind(df_usa, df_fra, df_bra, df_tur)
+df_all$Market <- factor(df_all$Market,
+                        levels = c("USA", "France",
+                                   "Brazil", "Turkey"))
+
+#stats descriptives
+desc_stats <- df_all |>
+  group_by(Market) |>
+  summarise(
+    N_obs      = n(),
+    RTA_mean   = round(mean(RTA, na.rm = TRUE), 6),
+    RTA_sd     = round(sd(RTA,   na.rm = TRUE), 6),
+    RTA_min    = round(min(RTA,  na.rm = TRUE), 6),
+    RTA_max    = round(max(RTA,  na.rm = TRUE), 6),
+    FP_mean    = round(mean(FP,  na.rm = TRUE), 4),
+    FP_sd      = round(sd(FP,    na.rm = TRUE), 4),
+    FP_min     = round(min(FP,   na.rm = TRUE), 4),
+    FP_max     = round(max(FP,   na.rm = TRUE), 4),
+    .groups    = "drop"
+  )
+
+print(desc_stats, width = Inf)
+
+#Correlation RTA et F_P pour chaque marché
+cor_results <- df_all |>
+  group_by(Market) |>
+  summarise(
+    Correlation = round(cor(RTA, FP, use = "complete.obs"), 4),
+    P_value     = round(cor.test(RTA, FP)$p.value, 6),
+    .groups     = "drop"
+  )
+
+print(cor_results)
+
+
+cat("\n By market AND sub-period\n")
+cor_by_period <- df_all |>
+  group_by(Market, Period) |>
+  summarise(
+    N           = n(),
+    Correlation = round(cor(RTA, FP, use = "complete.obs"), 4),
+    .groups     = "drop"
+  )
+
+print(cor_by_period, n = Inf)
+
+dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
+
+write.csv(desc_stats,   "output/tables/descriptive_stats.csv",  row.names = FALSE)
+write.csv(cor_results,  "output/tables/correlations.csv",        row.names = FALSE)
+write.csv(cor_by_period,"output/tables/correlations_period.csv", row.names = FALSE)
+write.csv(df_all,       "output/tables/full_dataset.csv",        row.names = FALSE)
+
+save(df_usa, df_fra, df_bra, df_tur, df_all,
+     rta_usa, rta_fra, rta_bra, rta_tur,
+     fp_usa,  fp_fra,  fp_bra,  fp_tur,
+     desc_stats, cor_results, cor_by_period,
+     file = "data/rta_fp.RData")
+
+
+#Résumé final
+cat ("Summary")
+for (mkt in levels(df_all$Market)) {
+  sub <- df_all[df_all$Market == mkt, ]
+  cor <- round(cor(sub$RTA, sub$FP, use = "complete.obs"), 4)
+  cat(mkt, ": obs =", nrow(sub),
+      "| avg RTA =", round(mean(sub$RTA), 6),
+      "| avg F_P =", round(mean(sub$FP),  4),
+      "| cor(RTA,FP) =", cor, "\n")
+}
+
+  
+  
+  
+  
+
+  
+  
+  
+

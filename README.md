@@ -71,16 +71,7 @@ install.packages(c("quantmod", "tidyverse", "ggplot2",
                    "broom", "kableExtra", "gridExtra"))
 ```
 
-### Run in order
 
-```r
-source("scripts/01_import_data.R")   # ~2 min (downloads data)
-source("scripts/02_market_model.R")  # ~30 sec
-source("scripts/03_rta_fp.R")        # coming soon
-source("scripts/04_regression.R")    # coming soon
-```
-
-Then open `rapport.Rmd` and press **Knit** (`Ctrl + Shift + K`).
 
 ---
 

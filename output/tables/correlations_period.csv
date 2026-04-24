@@ -1,0 +1,13 @@
+"Market","Period","N","Correlation"
+"USA","P1: 2018-2019 (Pre-COVID)",502,0.5386
+"USA","P2: 2020-2021 (COVID)",505,0.6914
+"USA","P3: 2022-2025 (Post-COVID)",1002,0.4691
+"France","P1: 2018-2019 (Pre-COVID)",508,0.5185
+"France","P2: 2020-2021 (COVID)",515,0.71
+"France","P3: 2022-2025 (Post-COVID)",1022,0.4973
+"Brazil","P1: 2018-2019 (Pre-COVID)",491,0.5976
+"Brazil","P2: 2020-2021 (COVID)",495,0.6263
+"Brazil","P3: 2022-2025 (Post-COVID)",999,0.6225
+"Turkey","P1: 2018-2019 (Pre-COVID)",482,0.6585
+"Turkey","P2: 2020-2021 (COVID)",497,0.5539
+"Turkey","P3: 2022-2025 (Post-COVID)",993,0.038
